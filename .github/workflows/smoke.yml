@@ -1,0 +1,19 @@
+name: Verificacao inicial do laboratorio
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          
+      - run: npm install --no-audit --no-fund
+      # Os testes de seguranca ainda falham de proposito antes da primeira correcao.
+      # Quando concluir a Aula 01, altere para `npm test`.
+      - run: npm run test:smoke
