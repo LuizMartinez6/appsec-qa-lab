@@ -1,5 +1,6 @@
 import express from 'express';
 import { documentsRouter } from './routes/documents.js';
+import { adminRouter } from './routes/admin.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -14,6 +15,8 @@ app.get('/api/me', (req, res) => {
 });
 
 app.use('/api/documents', documentsRouter);
+
+app.use('/api/admin', adminRouter);
 
 app.use((req, res) => {
   return res.status(404).json({ error: 'Rota nao encontrada.' });
