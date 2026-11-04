@@ -6,6 +6,7 @@
   "description": "Laboratorio local de AppSec: identificar, corrigir e testar vulnerabilidades de API.",
   "scripts": {
     "start": "node src/server.js",
+    "start:test": "node --env-file=.env.test src/server.js",
     "dev": "node --watch src/server.js",
     "test": "playwright test",
     "test:smoke": "playwright test tests/smoke.spec.ts",
