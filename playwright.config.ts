@@ -14,5 +14,8 @@ export default defineConfig({
     url: 'http://127.0.0.1:3100/health',
     reuseExistingServer: !process.env.CI,
     timeout: 20_000,
+    env: {
+      NODE_ENV: 'test',
+    }
   },
 });
