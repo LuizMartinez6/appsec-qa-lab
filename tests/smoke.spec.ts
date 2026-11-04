@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ request }) => {
+  const response = await request.post('/test/reset-auth');
+
+  expect(response.status()).toBe(200);
+});
+
 test('API deve estar saudavel', async ({ request }) => {
   const response = await request.get('/health');
   expect(response.status()).toBe(200);

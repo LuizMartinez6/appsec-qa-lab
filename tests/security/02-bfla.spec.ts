@@ -1,6 +1,10 @@
 import { test, expect} from '@playwright/test'
-import { header } from 'express/lib/request'
-import { request } from 'node:http'
+
+test.beforeEach(async ({ request }) => {
+  const response = await request.post('/test/reset-auth');
+
+  expect(response.status()).toBe(200);
+});
 
 test('Alice não pode consultar a rota de dashboard', async ({request}) => {
     const response = await request.get('/api/admin/dashboard', {
