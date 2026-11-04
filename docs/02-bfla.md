@@ -1,94 +1,75 @@
-# Aula 02 — BFLA (Broken Function Level Authorization)
+# BFLA — Usuário comum acessando uma área administrativa
 
-**Projeto:** appsec-qa-lab  
-**Categoria:** OWASP API5:2023 — Broken Function Level Authorization  
-**Status:** Vulnerabilidade reproduzida e corrigida  
-**Tecnologias:** Node.js, Express e Playwright
+> **Situação:** falha reproduzida e corrigida no laboratório.  
+> **Categoria:** OWASP API5:2023 — Broken Function Level Authorization.
 
-## 1. Objetivo
+## O problema, em poucas palavras
 
-Compreender a diferença entre autenticação e autorização, identificar uma falha de controle de acesso em uma funcionalidade administrativa e implementar uma correção utilizando RBAC (*Role-Based Access Control*).
+Imagine que Alice possui uma conta comum e que existe uma área reservada aos administradores.
 
-## 2. Cenário da vulnerabilidade
+No nosso laboratório, **Alice conseguia acessar a rota administrativa mesmo sem ter o papel de administrador**. Ela estava autenticada, mas isso não deveria dar acesso a qualquer funcionalidade do sistema.
 
-A aplicação possui uma rota administrativa:
+**A diferença essencial:** autenticação confirma *quem você é*; autorização verifica *o que você pode fazer*.
 
-`GET /api/admin/dashboard`
+## Como identificamos a falha
 
-Essa funcionalidade deveria ser acessível exclusivamente por usuários com a permissão `admin`.
+Enviamos uma requisição para `GET /api/admin/dashboard` usando o token de Alice.
 
-| Usuário | Role | Acesso esperado |
-|---|---|---|
-| Alice | user | 403 Forbidden |
-| Admin | admin | 200 OK |
-| Sem autenticação | — | 401 Unauthorized |
+- **Esperado:** `403 Forbidden`, porque ela não tem permissão de administrador.
+- **Encontrado antes da correção:** `200 OK`.
 
-## 3. Causa raiz
+O servidor verificava que Alice tinha uma sessão válida, mas não conferia seu papel (`role`).
 
-A vulnerabilidade ocorria porque a rota administrativa verificava apenas se o usuário estava autenticado, sem validar seu nível de permissão.
+## O que estava errado no código?
 
-Isso permitia que usuários comuns acessassem funcionalidades destinadas exclusivamente a administradores.
+A rota exigia somente autenticação:
 
-Durante o teste inicial, Alice conseguiu acessar o dashboard e recebeu `200 OK`, quando o comportamento esperado era `403 Forbidden`.
+```js
+adminRouter.use(requireAuthentication);
+```
 
-## 4. Correção aplicada
+Isso era suficiente para barrar alguém sem token, mas **não diferenciava usuários comuns de administradores**.
 
-Foi implementado um middleware de autorização chamado `requireRole`, responsável por comparar o papel do usuário autenticado com a permissão exigida pela rota.
+## Como corrigimos
 
-O middleware utiliza `req.currentUser.role`, valor disponibilizado anteriormente pelo `requireAuthentication`.
+Criamos um middleware para verificar a permissão exigida e o aplicamos à rota:
 
-Foram estabelecidas três regras:
+```js
+adminRouter.use(requireAuthentication);
+adminRouter.use(requireRole('admin'));
+```
 
-- Sem usuário autenticado: retornar `401 Unauthorized`.
-- Usuário autenticado sem o papel exigido: retornar `403 Forbidden`.
-- Usuário com a permissão necessária: executar `next()` e permitir a continuação.
+O `requireRole('admin')` verifica o campo `role` do usuário autenticado:
 
-A rota administrativa passou a utilizar os middlewares nesta ordem:
+- Se não há identidade autenticada, o acesso é negado com `401`.
+- Se o usuário está autenticado, mas não é administrador, recebe `403`.
+- Se é administrador, a requisição pode continuar.
 
-`requireAuthentication` → `requireRole('admin')` → `dashboard`
+A **ordem** importa: primeiro identificamos a pessoa, depois verificamos sua permissão.
 
-## 5. Validação da correção
+## Como verificamos a correção
 
-Foram criados testes automatizados com Playwright cobrindo três cenários:
+O arquivo [`tests/security/02-bfla.spec.ts`](../tests/security/02-bfla.spec.ts) verifica:
 
-| Cenário | Resultado |
-|---|---|
-| Alice tenta acessar o dashboard | 403 — Passou |
-| Admin acessa o dashboard | 200 — Passou |
-| Acesso sem token | 401 — Passou |
+| Cenário | Resposta esperada |
+| --- | --- |
+| Alice tenta acessar o dashboard | `403` |
+| Administrador acessa o dashboard | `200` |
+| Requisição sem token | `401` |
 
-**Resultados finais:**
+**Resultado registrado:** 3 testes passaram. Esses cenários também passaram na regressão geral de 15 testes.
 
-- Testes BFLA: 3 de 3 passaram.
-- Testes BOLA: 4 de 4 passaram.
-- Testes smoke: 2 de 2 passaram.
-- **Suíte completa: 9 de 9 testes passaram.**
+Para executar apenas estes testes:
 
-## 6. Impacto da vulnerabilidade
+```bash
+npx playwright test tests/security/02-bfla.spec.ts
+```
 
-A falha permitia acesso não autorizado a uma funcionalidade administrativa, comprometendo o controle de acesso da aplicação.
+## O que esse resultado não significa
 
-Neste laboratório, a rota retornava apenas uma mensagem administrativa. Não foi demonstrada exposição de dados sensíveis ou execução de operações destrutivas.
+A rota do laboratório apenas devolve uma mensagem de demonstração. Não comprovamos acesso a dados sensíveis nem alterações administrativas. Também não examinamos todas as permissões possíveis de uma aplicação real.
 
-Em aplicações reais, falhas semelhantes podem ter impactos maiores dependendo das funcionalidades administrativas expostas.
+**Referência:** [OWASP — Broken Function Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/).
 
-## 7. Conhecimentos adquiridos
-
-- Diferença entre autenticação e autorização.
-- Funcionamento dos middlewares no Express.
-- Uso de `req`, `res` e `next()`.
-- Controle de acesso baseado em papéis (RBAC).
-- Importância da ordem de execução dos middlewares.
-- Diferenças entre HTTP 401, 403 e 500.
-- Uso de testes automatizados para validar controles de segurança.
-- Importância dos testes de regressão após correções.
-
-## 8. Conclusão
-
-A vulnerabilidade BFLA foi reproduzida e corrigida por meio da implementação de um middleware RBAC reutilizável.
-
-Os testes automatizados confirmaram que usuários comuns não conseguem acessar a rota administrativa, enquanto usuários autorizados permanecem com acesso.
-
-A correção resolve os cenários testados, sem representar uma garantia de segurança completa da aplicação.
-
-**Observação:** a autenticação utiliza tokens fictícios exclusivamente para treinamento local e não deve ser utilizada em produção.
+---
+*Laboratório local com usuários, permissões e tokens fictícios.*

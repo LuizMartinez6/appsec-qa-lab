@@ -8,6 +8,7 @@ export const users = Object.freeze([
 // Simplificacao didatica: NÃO é um sistema de autenticacao para producao.
 export const demoTokens = Object.freeze({
   'alice-lab-token': 'user-alice',
+  'alice-mobile-token': 'user-alice',
   'bob-lab-token': 'user-bob',
-  'admin-lab-token': 'user-admin'
+  'admin-lab-token': 'user-admin',
 });

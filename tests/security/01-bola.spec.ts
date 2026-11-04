@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ request }) => {
+  const response = await request.post('/test/reset-auth');
+
+  expect(response.status()).toBe(200);
+});
+
 // AULA 01: o teste de seguranca abaixo deve FALHAR ANTES da correcao.
 // Isso e proposital: primeiro demonstramos a falha; depois corrigimos o codigo.
 
