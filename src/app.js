@@ -3,12 +3,13 @@ import { documentsRouter } from './routes/documents.js';
 import { adminRouter } from './routes/admin.js';
 import {requireAuthentication, revokedTokens, resetRevokedToken} from './middleware/auth.js';
 import { validateCredentials } from './services/authService.js';
-import { createSession } from './services/sessionService.js';
+import { createSession, resetSessions } from './services/sessionService.js';
 
 export const app = express();
 if (process.env.NODE_ENV == 'test'){
   app.post('/test/reset-auth', (req, res) => {
     resetRevokedToken()
+    resetSessions()
     return res.status(200).json({
       message: 'Estado de autenticação restaurado'
     })
