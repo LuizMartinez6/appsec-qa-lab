@@ -9,3 +9,7 @@ export function createSession(userId) {
 
   return token;
 }
+
+export function resetSessions() {
+  sessions.clear();
+}
